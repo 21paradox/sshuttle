@@ -87,11 +87,18 @@ class Method(BaseMethod):
             return
         sender = socket.socket(sock.family, socket.SOCK_DGRAM)
         sender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, 'SO_REUSEPORT'):
+            sender.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         try:
             sender.setsockopt(socket.SOL_IP, IP_TRANSPARENT, 1)
         except PermissionError as e:
             self.setsockopt_error(e)
-        sender.bind(srcip)
+        try:
+            sender.bind(srcip)
+        except OSError as e:
+            debug1("Failed to bind UDP sender: %s" % e)
+            sender.close()
+            return
         sender.sendto(data, dstip)
         sender.close()
 
